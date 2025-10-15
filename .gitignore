@@ -24,4 +24,4 @@ logs/
 .cursor/
 
 # Packages
-# *.egg-info/
+*.egg-info/
