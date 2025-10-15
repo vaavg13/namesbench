@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+
+# Environment
+.venv/
+.env
+
+# Output directories
+out/
+
+# Logs
+logs/
+
+# Testing
+.pytest_cache/
+.coverage
+
+# Cursor
+.cursor/

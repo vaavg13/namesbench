@@ -1,0 +1,2 @@
+[console_scripts]
+run-benchmark = namesbench.run_benchmark:main

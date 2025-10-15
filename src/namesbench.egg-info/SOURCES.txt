@@ -1,0 +1,16 @@
+README.md
+pyproject.toml
+src/namesbench/__init__.py
+src/namesbench/agents.py
+src/namesbench/benchmark_runner.py
+src/namesbench/game_state.py
+src/namesbench/image_board.py
+src/namesbench/player_prompt.py
+src/namesbench/spymaster_prompt.py
+src/namesbench.egg-info/PKG-INFO
+src/namesbench.egg-info/SOURCES.txt
+src/namesbench.egg-info/dependency_links.txt
+src/namesbench.egg-info/entry_points.txt
+src/namesbench.egg-info/requires.txt
+src/namesbench.egg-info/top_level.txt
+tests/test_benchmark_no_llm.py
