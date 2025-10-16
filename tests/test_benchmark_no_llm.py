@@ -43,18 +43,19 @@ def test_run_game_without_llms(monkeypatch, tmp_path):
     monkeypatch.setattr(
         benchmark_runner,
         "create_spymaster_runnable",
-        lambda model: DummyRunnable(spymaster_func),
+        lambda provider, model: DummyRunnable(spymaster_func),
     )
     monkeypatch.setattr(
         benchmark_runner,
         "create_player_runnable",
-        lambda model: DummyRunnable(player_func),
+        lambda provider, model: DummyRunnable(player_func),
     )
 
     result = benchmark_runner.run_game(
         deck_path=deck_dir,
         grid="2x4",
         model="stub-model",
+        provider="openai",
         seed=42,
         friendly_fraction=0.5,
         out_dir=output_dir,

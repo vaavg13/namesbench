@@ -10,6 +10,20 @@ from typing import Dict, List, Optional, Tuple
 from PIL import Image, ImageDraw, ImageFont
 
 
+MAX_BASE64_BYTES = 5 * 1024 * 1024
+BASE64_HEADER = "data:image/png;base64,"
+PAYLOAD_CHAR_LIMIT = MAX_BASE64_BYTES - len(BASE64_HEADER)
+MAX_IMAGE_BYTES = 3 * (PAYLOAD_CHAR_LIMIT // 4)
+MIN_TILE_DIMENSION = 64
+DOWNSCALE_FACTOR = 0.85
+PNG_COMPRESS_LEVEL = 9
+
+try:
+    _RESAMPLE = Image.Resampling.LANCZOS
+except AttributeError:  # pragma: no cover
+    _RESAMPLE = Image.LANCZOS
+
+
 @dataclass
 class BoardImages:
     composite_path: Path
@@ -84,53 +98,73 @@ def _compose_board_image(
         max_width = max(max_width, img.width)
         max_height = max(max_height, img.height)
 
-    board_width = cols * max_width
-    board_height = rows * max_height
-    board = Image.new("RGB", (board_width, board_height), color=(30, 30, 30))
-    draw = ImageDraw.Draw(board)
+    tile_width = max(max_width, MIN_TILE_DIMENSION)
+    tile_height = max(max_height, MIN_TILE_DIMENSION)
 
-    font_size = max(48, int(min(max_width, max_height) * 0.18))
-    font = _load_font(font_size)
+    keys: List[int] = list(index_to_file.keys())
 
-    for (index, img) in zip(index_to_file.keys(), images):
-        idx0 = index - 1
-        row = idx0 // cols
-        col = idx0 % cols
-        x_offset = col * max_width
-        y_offset = row * max_height
+    while True:
+        board_width = cols * tile_width
+        board_height = rows * tile_height
+        board = Image.new("RGB", (board_width, board_height), color=(30, 30, 30))
+        draw = ImageDraw.Draw(board)
 
-        resized = img.resize((max_width, max_height))
-        board.paste(resized, (x_offset, y_offset))
+        font_size = max(12, int(min(tile_width, tile_height) * 0.22))
+        font = _load_font(font_size)
 
-        number_bg = (0, 0, 0)
-        label = str(index)
-        # Pillow >=10 removed textsize; use textbbox for robust size calculation
-        bbox = draw.textbbox((0, 0), label, font=font)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
-        padding = max(10, font_size // 8)
-        rect = [
-            x_offset + max_width - text_width - 2 * padding,
-            y_offset + max_height - text_height - 2 * padding,
-            x_offset + max_width,
-            y_offset + max_height,
-        ]
-        draw.rectangle(rect, fill=number_bg)
-        draw.text((rect[0] + padding, rect[1] + padding), label, font=font, fill=(255, 255, 255))
+        for index, img in zip(keys, images):
+            idx0 = index - 1
+            row = idx0 // cols
+            col = idx0 % cols
+            x_offset = col * tile_width
+            y_offset = row * tile_height
 
-        if index_to_team:
-            team = index_to_team.get(index)
-            if team == "friendly":
-                outline = (0, 200, 0)
-            else:
-                outline = (200, 0, 0)
-            draw.rectangle(
-                [x_offset, y_offset, x_offset + max_width, y_offset + max_height],
-                outline=outline,
-                width=6,
+            resized = img.resize((tile_width, tile_height), resample=_RESAMPLE)
+            board.paste(resized, (x_offset, y_offset))
+            resized.close()
+
+            label = str(index)
+            bbox = draw.textbbox((0, 0), label, font=font)
+            text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1]
+            padding = max(4, font_size // 6)
+            rect_width = text_width + 2 * padding
+            rect_height = text_height + 2 * padding
+            rect_left = x_offset + max(0, tile_width - rect_width)
+            rect_top = y_offset + max(0, tile_height - rect_height)
+            rect = [
+                rect_left,
+                rect_top,
+                rect_left + rect_width,
+                rect_top + rect_height,
+            ]
+            draw.rectangle(rect, fill=(0, 0, 0))
+            draw.text((rect_left + padding, rect_top + padding), label, font=font, fill=(255, 255, 255))
+
+            if index_to_team:
+                team = index_to_team.get(index)
+                outline = (0, 200, 0) if team == "friendly" else (200, 0, 0)
+                draw.rectangle(
+                    [x_offset, y_offset, x_offset + tile_width, y_offset + tile_height],
+                    outline=outline,
+                    width=max(2, tile_width // 18),
+                )
+
+        board.save(output_path, format="PNG", optimize=True, compress_level=PNG_COMPRESS_LEVEL)
+        file_size = output_path.stat().st_size
+        board.close()
+
+        if file_size <= MAX_IMAGE_BYTES:
+            break
+
+        if tile_width <= MIN_TILE_DIMENSION and tile_height <= MIN_TILE_DIMENSION:
+            raise RuntimeError(
+                f"Composite image exceeds {MAX_IMAGE_BYTES} bytes even after downscaling: {output_path}"
             )
 
-    board.save(output_path)
+        tile_width = max(MIN_TILE_DIMENSION, int(tile_width * DOWNSCALE_FACTOR))
+        tile_height = max(MIN_TILE_DIMENSION, int(tile_height * DOWNSCALE_FACTOR))
+
     for img in images:
         img.close()
     return output_path
@@ -152,6 +186,11 @@ def _load_font(font_size: int) -> ImageFont.ImageFont:
 
 def _image_to_data_url(path: Path) -> str:
     data = base64.b64encode(path.read_bytes()).decode("ascii")
-    return f"data:image/png;base64,{data}"
+    data_url = f"{BASE64_HEADER}{data}"
+    if len(data_url) > MAX_BASE64_BYTES:
+        raise RuntimeError(
+            f"Composite data URL exceeds {MAX_BASE64_BYTES} bytes. Consider reducing grid size or image resolution."
+        )
+    return data_url
 
 

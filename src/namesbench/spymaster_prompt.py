@@ -14,12 +14,5 @@ As the **spymaster**, you will be given a composite image of the full board with
 3. Supply the **count** of friendly cards that match the clue.
 4. Avoid literal descriptions; prioritize symbolism, mood, and story elements that guide your teammate away from opponent cards.
 
-### Output Format
-Return your answer using exactly this structure:
-`Clue: <one-word clue> - <number>`
-
-On the next line, privately list the friendly indices you intended for your teammate using:
-`Targets: [<index1>, <index2>, ...]`
-
 Focus on abstract, creative connections. Never reveal which specific indices are targeted.
 """

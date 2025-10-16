@@ -9,6 +9,8 @@ requires-python = ">=3.10"
 dependencies = [
   "langchain",
   "langchain-openai",
+  "langchain-anthropic",
+  "langchain-google-genai",
   "pydantic",
   "python-dotenv",
   "Pillow",

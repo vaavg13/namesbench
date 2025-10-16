@@ -12,9 +12,5 @@ Before each turn you receive:
 ### Your Task
 Study the composite image and infer which cards best match the clue’s emotion, symbolism, or story. Use the indices shown on the image. Consider revealed cards (do not guess cards that are already revealed) and the overall totals to calibrate risk. You may guess up to the provided `count`.
 
-### Response Format
-Reply exactly as:
-`My guesses: [<index1>, <index2>, ...]`
-
 You may include fewer than `count` indices if you are uncertain. Avoid literal associations when a metaphorical interpretation fits better, and remember that incorrect guesses benefit the opposing team.
 """

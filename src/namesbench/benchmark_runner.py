@@ -8,8 +8,6 @@ from typing import Dict, List, Optional
 from .agents import (
     create_player_runnable,
     create_spymaster_runnable,
-    parse_player_response,
-    parse_spymaster_response,
 )
 from .game_state import GameState
 from .image_board import BoardImages, build_image_board
@@ -19,6 +17,7 @@ def run_game(
     deck_path: Path,
     grid: str,
     model: str,
+    provider: str,
     seed: Optional[int],
     friendly_fraction: float,
     out_dir: Path,
@@ -39,8 +38,8 @@ def run_game(
 
     prompt_context = {}
 
-    spymaster = create_spymaster_runnable(model)
-    player = create_player_runnable(model)
+    spymaster = create_spymaster_runnable(provider, model)
+    player = create_player_runnable(provider, model)
 
     trace: List[Dict[str, object]] = []
 
@@ -59,8 +58,7 @@ def run_game(
             "revealed_opponent": sorted(set(game_state.board.opponent_positions) - set(game_state.board.remaining_opponent)),
             **prompt_context,
         }
-        spymaster_raw = spymaster.invoke(clue_input)
-        spymaster_response = parse_spymaster_response(spymaster_raw)
+        spymaster_response = spymaster.invoke(clue_input)
         if progress:
             print(
                 f"[Round {round_number}] Clue → {spymaster_response.clue} - {spymaster_response.count} | Targets: {spymaster_response.targets}"
@@ -79,8 +77,7 @@ def run_game(
             "opponent_total": opponent_total,
             **prompt_context,
         }
-        player_raw = player.invoke(player_input)
-        player_response = parse_player_response(player_raw, count)
+        player_response = player.invoke(player_input)
         if progress:
             print(f"[Round {round_number}] Guesses → {player_response.guesses}")
 
